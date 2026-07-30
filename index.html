@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>📸 Gerador de PDF - Converta suas Fotos em PDF A4</title>
+  <title>📸 Gerador de PDF - Converta Fotos em PDF A4</title>
 
   <!-- Meta Tags PWA & iOS Safari -->
-  <meta name="description" content="Aplicação web simples, rápida e 100% gratuita para converter fotos da câmera ou galeria em arquivos PDF formatados em A4.">
+  <meta name="description" content="Aplicação web simples, rápida e 100% gratuita para converter fotos da câmera, galeria ou arquivos em PDF formatado em A4.">
   <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -33,7 +33,7 @@
 </head>
 <body class="min-h-full flex flex-col justify-between text-slate-800 antialiased selection:bg-blue-200">
 
-  <!-- Cabeçalho Fixo / Superior -->
+  <!-- Cabeçalho Fixo -->
   <header class="w-full bg-blue-600 text-white shadow-lg sticky top-0 z-30 pt-safe">
     <div class="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
       <div class="flex items-center space-x-3">
@@ -52,26 +52,25 @@
   <!-- Conteúdo Principal -->
   <main class="w-full max-w-md mx-auto px-4 py-6 flex-1 flex flex-col justify-center space-y-6">
 
-    <!-- Card de Boas-Vindas / Instruções Curtas -->
+    <!-- Card de Instruções -->
     <div id="instructionCard" class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 text-center space-y-2">
       <h2 class="text-lg font-bold text-slate-900">Como funciona?</h2>
       <p class="text-sm text-slate-600 leading-relaxed">
-        Tire uma foto do seu documento ou escolha da sua galeria. A imagem será ajustada automaticamente em uma página de papel A4 pronta para salvar ou enviar.
+        Tire uma foto, escolha da sua galeria ou selecione no app <b>Arquivos</b> do seu iPhone. A foto será ajustada em uma folha A4 em segundos.
       </p>
     </div>
 
-    <!-- Banner de Erro (Oculto por padrão) -->
+    <!-- Banner de Erro -->
     <div id="errorMessage" class="hidden bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 text-rose-800 text-center text-sm font-semibold shadow-md animate-pulse">
-      ⚠️ <span id="errorText">Por favor, selecione um arquivo de imagem válido.</span>
+      ⚠️ <span id="errorText">Por favor, selecione um arquivo válido.</span>
     </div>
 
-    <!-- Botão Grande de Carregar Imagem -->
+    <!-- Seletor de Arquivos Inteligente iOS (Sem atributo capture para permitir Galeria/Arquivos/Câmera) -->
     <div class="space-y-4">
       <input 
         type="file" 
         id="imageInput" 
-        accept="image/*" 
-        capture="environment" 
+        accept="image/*,application/pdf,.heic,.heif" 
         class="hidden"
       >
       
@@ -83,20 +82,19 @@
       >
         <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
           <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
         </div>
-        <span class="text-xl font-extrabold tracking-wide text-center">Tirar Foto ou Escolher da Galeria</span>
-        <span class="text-xs text-blue-200 mt-2 font-medium">Toque aqui para abrir a câmera ou arquivos</span>
+        <span class="text-xl font-extrabold tracking-wide text-center">Escolher Foto ou Arquivo</span>
+        <span class="text-xs text-blue-200 mt-2 font-medium text-center">Toque para abrir a Câmera, Galeria ou Arquivos</span>
       </button>
     </div>
 
-    <!-- Container de Pré-visualização da Imagem (Oculto até selecionar a foto) -->
+    <!-- Container de Pré-visualização da Imagem -->
     <div id="previewCard" class="hidden bg-white rounded-3xl p-5 shadow-lg border border-slate-200 space-y-4">
       <div class="flex items-center justify-between border-b border-slate-100 pb-3">
         <span class="text-sm font-bold text-slate-700 flex items-center space-x-2">
-          <span>🖼️</span> <span>Pré-visualização da Foto</span>
+          <span>🖼️</span> <span>Foto Selecionada</span>
         </span>
         <button 
           id="rotateBtn" 
@@ -134,7 +132,7 @@
       </button>
     </div>
 
-    <!-- Botão de Gerar e Baixar PDF (Aparece após selecionar foto) -->
+    <!-- Botão de Gerar PDF -->
     <div id="generateActionArea" class="hidden space-y-3 pt-2">
       <button 
         id="generatePdfBtn" 
@@ -142,16 +140,58 @@
         class="w-full flex items-center justify-center space-x-3 py-5 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all duration-200 text-white rounded-3xl shadow-xl text-xl font-black border-4 border-emerald-400/30"
       >
         <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <span>Gerar e Baixar PDF</span>
+        <span>Gerar PDF em A4</span>
       </button>
       <p class="text-center text-xs text-slate-500 font-medium">
-        📄 O arquivo será formatado automaticamente em página A4.
+        📄 A foto será convertida e centralizada na folha A4.
       </p>
     </div>
 
-    <!-- Indicador de Carregamento (Loading Overlay) -->
+    <!-- Card de Download e Compartilhamento Direto para iOS Safari -->
+    <div id="downloadResultCard" class="hidden bg-emerald-50 border-2 border-emerald-300 rounded-3xl p-6 shadow-xl text-center space-y-4 animate-fade-in">
+      <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl shadow-inner">
+        🎉
+      </div>
+      <div>
+        <h3 class="text-xl font-black text-emerald-900">Seu PDF está pronto!</h3>
+        <p class="text-xs text-emerald-700 mt-1 font-medium">Toque no botão abaixo para baixar ou salvar nos Arquivos do seu iPhone.</p>
+      </div>
+
+      <!-- Botão Explícito de Download do Blob -->
+      <a 
+        id="downloadPdfLink" 
+        href="#" 
+        download="documento.pdf"
+        class="w-full flex items-center justify-center space-x-3 py-4 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all text-white rounded-2xl shadow-lg text-lg font-bold border-2 border-emerald-400"
+      >
+        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        <span>📥 Baixar PDF Agora</span>
+      </a>
+
+      <!-- Botão de Compartilhar / Salvar em Arquivos (Web Share API para iOS) -->
+      <button 
+        id="sharePdfBtn" 
+        type="button"
+        class="hidden w-full flex items-center justify-center space-x-2 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold shadow transition"
+      >
+        <span>📲 Salvar em Arquivos / Compartilhar</span>
+      </button>
+
+      <!-- Reset / Nova Foto -->
+      <button 
+        type="button" 
+        onclick="location.reload()" 
+        class="text-xs font-bold text-slate-500 hover:text-slate-700 underline pt-2 block mx-auto"
+      >
+        🔄 Converter outra foto
+      </button>
+    </div>
+
+    <!-- Indicador de Carregamento (Spinner) -->
     <div id="loadingOverlay" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-white space-y-4">
       <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
       <div class="text-center">
@@ -164,7 +204,7 @@
 
   <!-- Rodapé Simples -->
   <footer class="w-full text-center py-4 text-xs text-slate-400 font-medium">
-    <p>Criado com carinho para ser simples e rápido ❤️</p>
+    <p>Criado para ser simples, rápido e 100% compatível com iOS ❤️</p>
   </footer>
 
   <!-- Script da Aplicação -->

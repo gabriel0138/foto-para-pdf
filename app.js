@@ -1,6 +1,6 @@
 /**
- * 📸 Gerador de PDF (Foto para PDF A4)
- * Aplicação 100% Client-Side focada em usabilidade e dispositivos móveis (iOS/Safari).
+ * 📸 Gerador de PDF (Foto para PDF A4) - Otimizado para iOS / Safari
+ * Arquitetura de Download Robusta & Seletor de Arquivos Inteligente
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -8,37 +8,36 @@ document.addEventListener('DOMContentLoaded', () => {
   const imageInput = document.getElementById('imageInput');
   const previewCard = document.getElementById('previewCard');
   const imagePreview = document.getElementById('imagePreview');
-  const selectBtn = document.getElementById('selectBtn');
   const rotateBtn = document.getElementById('rotateBtn');
   const generateActionArea = document.getElementById('generateActionArea');
   const generatePdfBtn = document.getElementById('generatePdfBtn');
+  const downloadResultCard = document.getElementById('downloadResultCard');
+  const downloadPdfLink = document.getElementById('downloadPdfLink');
+  const sharePdfBtn = document.getElementById('sharePdfBtn');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const errorMessage = document.getElementById('errorMessage');
   const errorText = document.getElementById('errorText');
   const fileNameDisplay = document.getElementById('fileNameDisplay');
   const fileDimensionsDisplay = document.getElementById('fileDimensionsDisplay');
 
-  // Estado local da imagem
+  // Estado local
   let state = {
     dataUrl: null,
     fileName: '',
     width: 0,
     height: 0,
-    rotation: 0 // Ângulo de rotação (0, 90, 180, 270)
+    rotation: 0,
+    generatedBlob: null,
+    generatedFileName: ''
   };
 
-  /**
-   * Registra o Service Worker para suporte PWA / Offline
-   */
+  // Registra Service Worker PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => {
-      console.log('Service Worker não registrado:', err);
+      console.log('Service Worker PWA:', err);
     });
   }
 
-  /**
-   * Exibe uma mensagem de erro na interface
-   */
   function showError(msg) {
     errorText.textContent = msg;
     errorMessage.classList.remove('hidden');
@@ -47,89 +46,78 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   }
 
-  /**
-   * Esconde a mensagem de erro
-   */
   function clearError() {
     errorMessage.classList.add('hidden');
     errorText.textContent = '';
   }
 
   /**
-   * Event Listener quando o usuário seleciona ou tira uma foto
+   * Seletor Inteligente: Lê o arquivo escolhido da Galeria, Câmera ou app Arquivos
    */
   imageInput.addEventListener('change', (e) => {
     clearError();
+    downloadResultCard.classList.add('hidden');
     const file = e.target.files[0];
 
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
-    // Validação do tipo de arquivo (deve ser imagem)
-    if (!file.type.startsWith('image/')) {
-      showError('O arquivo selecionado não é uma imagem válida. Por favor escolha uma foto (JPG, PNG, HEIC, etc).');
+    // Se for arquivo de imagem
+    if (file.type.startsWith('image/') || file.name.match(/\.(heic|heif|jpg|jpeg|png|webp|gif)$/i)) {
+      const reader = new FileReader();
+
+      reader.onload = function (event) {
+        const dataUrl = event.target.result;
+        const img = new Image();
+
+        img.onload = function () {
+          state.dataUrl = dataUrl;
+          state.fileName = file.name || 'foto.jpg';
+          state.width = img.naturalWidth;
+          state.height = img.naturalHeight;
+          state.rotation = 0;
+
+          imagePreview.src = dataUrl;
+          imagePreview.style.transform = 'rotate(0deg)';
+          fileNameDisplay.textContent = state.fileName;
+          fileDimensionsDisplay.textContent = `${state.width} x ${state.height} px`;
+
+          previewCard.classList.remove('hidden');
+          generateActionArea.classList.remove('hidden');
+
+          setTimeout(() => {
+            previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 150);
+        };
+
+        img.onerror = function () {
+          showError('Erro ao carregar a imagem. Formato não suportado.');
+        };
+
+        img.src = dataUrl;
+      };
+
+      reader.onerror = function () {
+        showError('Erro ao ler o arquivo no dispositivo.');
+      };
+
+      reader.readAsDataURL(file);
+    } else {
+      showError('Por favor selecione um arquivo de imagem (JPG, PNG, HEIC).');
       imageInput.value = '';
-      return;
     }
-
-    // Leitura do arquivo usando FileReader
-    const reader = new FileReader();
-
-    reader.onload = function (event) {
-      const dataUrl = event.target.result;
-      const img = new Image();
-
-      img.onload = function () {
-        // Atualiza estado local
-        state.dataUrl = dataUrl;
-        state.fileName = file.name || 'foto.jpg';
-        state.width = img.naturalWidth;
-        state.height = img.naturalHeight;
-        state.rotation = 0;
-
-        // Atualiza elementos da interface
-        imagePreview.src = dataUrl;
-        imagePreview.style.transform = 'rotate(0deg)';
-        fileNameDisplay.textContent = state.fileName;
-        fileDimensionsDisplay.textContent = `${state.width} x ${state.height} px`;
-
-        // Exibe o card de preview e botão de gerar PDF
-        previewCard.classList.remove('hidden');
-        generateActionArea.classList.remove('hidden');
-
-        // Rola a página suavemente até o preview
-        setTimeout(() => {
-          previewCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 150);
-      };
-
-      img.onerror = function () {
-        showError('Erro ao carregar os dados da imagem. O arquivo pode estar corrompido.');
-      };
-
-      img.src = dataUrl;
-    };
-
-    reader.onerror = function () {
-      showError('Ocorreu um erro ao ler o arquivo no seu dispositivo.');
-    };
-
-    reader.readAsDataURL(file);
   });
 
   /**
-   * Girar Imagem 90 Graus no Preview
+   * Girar imagem 90°
    */
   rotateBtn.addEventListener('click', () => {
     if (!state.dataUrl) return;
-
     state.rotation = (state.rotation + 90) % 360;
     imagePreview.style.transform = `rotate(${state.rotation}deg)`;
   });
 
   /**
-   * Utilitário para aplicar rotação física via Canvas antes de inserir no jsPDF
+   * Transforma a rotação visual em um Canvas físico
    */
   function getRotatedImageCanvas(imgElement, angle) {
     const canvas = document.createElement('canvas');
@@ -155,8 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Gera a nomeação automática inteligente baseada em data/hora
-   * Exemplo: documento-2026-07-30_1430.pdf
+   * Nomeação automática inteligente
    */
   function generateSmartFileName() {
     const now = new Date();
@@ -170,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Geração do Arquivo PDF A4 usando a biblioteca jsPDF
+   * Geração e Download Robusto para iOS Safari
    */
   generatePdfBtn.addEventListener('click', async () => {
     if (!state.dataUrl) {
@@ -178,15 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Exibe o indicador de carregamento
     loadingOverlay.classList.remove('hidden');
 
-    // Pequeno delay para garantir a renderização da animação do spinner
     setTimeout(() => {
       try {
         const { jsPDF } = window.jspdf;
 
-        // Processar rotação final se o usuário tiver girado no preview
         let finalDataUrl = state.dataUrl;
         let finalWidth = state.width;
         let finalHeight = state.height;
@@ -198,62 +182,87 @@ document.addEventListener('DOMContentLoaded', () => {
           finalHeight = canvas.height;
         }
 
-        // Definir orientação da página A4 baseada na proporção da imagem
-        // se a foto for mais larga do que alta -> Paisagem (landscape)
-        // se a foto for mais alta do que larga -> Retrato (portrait)
+        // Orientação proporcional A4
         const isLandscape = finalWidth > finalHeight;
         const pdfOrientation = isLandscape ? 'l' : 'p';
-
-        // Dimensões A4 em milímetros (mm)
-        // Portrait: 210mm (largura) x 297mm (altura)
-        // Landscape: 297mm (largura) x 210mm (altura)
         const pageW = isLandscape ? 297 : 210;
         const pageH = isLandscape ? 210 : 297;
 
-        // Margem de respiro de 10mm ao redor do documento para acabamento limpo
+        // Margem de 10mm
         const margin = 10;
         const availW = pageW - margin * 2;
         const availH = pageH - margin * 2;
 
-        // Cálculo da escala mantendo a proporção original (sem distorção)
         const scale = Math.min(availW / finalWidth, availH / finalHeight);
         const renderW = finalWidth * scale;
         const renderH = finalHeight * scale;
-
-        // Centralização exata da imagem na página A4
         const posX = (pageW - renderW) / 2;
         const posY = (pageH - renderH) / 2;
 
-        // Criar documento PDF no formato A4
         const pdf = new jsPDF({
           orientation: pdfOrientation,
           unit: 'mm',
           format: 'a4'
         });
 
-        // Detectar o formato da imagem (JPEG ou PNG)
         let imgFormat = 'JPEG';
         if (state.fileName.toLowerCase().endsWith('.png')) {
           imgFormat = 'PNG';
         }
 
-        // Adicionar imagem ao PDF
         pdf.addImage(finalDataUrl, imgFormat, posX, posY, renderW, renderH);
 
-        // Nome automático inteligente
         const outputFileName = generateSmartFileName();
+        state.generatedFileName = outputFileName;
 
-        // Faz o download direto do arquivo PDF no navegador
-        pdf.save(outputFileName);
+        // 🟢 MECANISMO ROBUSTO iOS: Gerar Blob em vez de disparar doc.save() direto
+        const pdfBlob = pdf.output('blob');
+        state.generatedBlob = pdfBlob;
 
-        // Sucesso visual
-        alert('🎉 Seu PDF foi gerado e baixado com sucesso!');
+        const blobUrl = URL.createObjectURL(pdfBlob);
+
+        // Configurar o botão explícito de download
+        downloadPdfLink.href = blobUrl;
+        downloadPdfLink.download = outputFileName;
+
+        // Configurar Web Share API para salvar no app "Arquivos" do iOS se disponível
+        const pdfFile = new File([pdfBlob], outputFileName, { type: 'application/pdf' });
+        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+          sharePdfBtn.classList.remove('hidden');
+          sharePdfBtn.onclick = async () => {
+            try {
+              await navigator.share({
+                files: [pdfFile],
+                title: 'Salvar PDF',
+                text: 'Seu documento em formato PDF'
+              });
+            } catch (shareErr) {
+              console.log('Compartilhamento cancelado ou não suportado:', shareErr);
+            }
+          };
+        } else {
+          sharePdfBtn.classList.add('hidden');
+        }
+
+        // Tentar disparo automático suave de download
+        const tempLink = document.createElement('a');
+        tempLink.href = blobUrl;
+        tempLink.download = outputFileName;
+        document.body.appendChild(tempLink);
+        tempLink.click();
+        document.body.removeChild(tempLink);
+
+        // Exibir o card permanente com os botões de ação
+        downloadResultCard.classList.remove('hidden');
+
+        setTimeout(() => {
+          downloadResultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 150);
 
       } catch (err) {
-        console.error('Erro na geração do PDF:', err);
-        showError('Ocorreu um erro inesperado ao gerar o PDF. Tente novamente.');
+        console.error('Erro ao gerar PDF:', err);
+        showError('Ocorreu um erro ao gerar o PDF. Tente novamente.');
       } finally {
-        // Oculta o spinner
         loadingOverlay.classList.add('hidden');
       }
     }, 200);
