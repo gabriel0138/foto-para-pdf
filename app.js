@@ -1,6 +1,6 @@
 /**
  * 📸 Gerador de PDF (Foto para PDF A4) - Otimizado para iOS / Safari
- * Arquitetura de Download Robusta & Seletor de Arquivos Inteligente
+ * Solução Definitiva para Download/Salvamento Direto sem abrir novas abas.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,26 +12,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const generateActionArea = document.getElementById('generateActionArea');
   const generatePdfBtn = document.getElementById('generatePdfBtn');
   const downloadResultCard = document.getElementById('downloadResultCard');
-  const downloadPdfLink = document.getElementById('downloadPdfLink');
-  const sharePdfBtn = document.getElementById('sharePdfBtn');
+  const primarySaveBtn = document.getElementById('primarySaveBtn');
+  const fallbackDownloadLink = document.getElementById('fallbackDownloadLink');
   const loadingOverlay = document.getElementById('loadingOverlay');
   const errorMessage = document.getElementById('errorMessage');
   const errorText = document.getElementById('errorText');
   const fileNameDisplay = document.getElementById('fileNameDisplay');
   const fileDimensionsDisplay = document.getElementById('fileDimensionsDisplay');
 
-  // Estado local
+  // Estado local da imagem e do PDF gerado
   let state = {
     dataUrl: null,
     fileName: '',
     width: 0,
     height: 0,
     rotation: 0,
-    generatedBlob: null,
-    generatedFileName: ''
+    generatedPdfFile: null,
+    generatedBlobUrl: null,
+    outputFileName: ''
   };
 
-  // Registra Service Worker PWA
+  // Registra o Service Worker PWA
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(err => {
       console.log('Service Worker PWA:', err);
@@ -52,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Seletor Inteligente: Lê o arquivo escolhido da Galeria, Câmera ou app Arquivos
+   * Seletor de Arquivos Inteligente iOS
    */
   imageInput.addEventListener('change', (e) => {
     clearError();
@@ -61,7 +62,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!file) return;
 
-    // Se for arquivo de imagem
     if (file.type.startsWith('image/') || file.name.match(/\.(heic|heif|jpg|jpeg|png|webp|gif)$/i)) {
       const reader = new FileReader();
 
@@ -102,13 +102,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       reader.readAsDataURL(file);
     } else {
-      showError('Por favor selecione um arquivo de imagem (JPG, PNG, HEIC).');
+      showError('Por favor selecione um arquivo de imagem válido (JPG, PNG, HEIC).');
       imageInput.value = '';
     }
   });
 
   /**
-   * Girar imagem 90°
+   * Rotação de Imagem
    */
   rotateBtn.addEventListener('click', () => {
     if (!state.dataUrl) return;
@@ -116,9 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
     imagePreview.style.transform = `rotate(${state.rotation}deg)`;
   });
 
-  /**
-   * Transforma a rotação visual em um Canvas físico
-   */
   function getRotatedImageCanvas(imgElement, angle) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -142,9 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return canvas;
   }
 
-  /**
-   * Nomeação automática inteligente
-   */
   function generateSmartFileName() {
     const now = new Date();
     const year = now.getFullYear();
@@ -157,7 +151,47 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Geração e Download Robusto para iOS Safari
+   * Função para Executar o Salvamento/Compartilhamento Nativo no iOS
+   */
+  async function triggerNativeSaveOrShare() {
+    if (!state.generatedPdfFile) return;
+
+    // 1. Tentar Web Share API NATIVA do iOS Safari (Menu "Salvar em Arquivos", "WhatsApp", etc)
+    if (navigator.canShare && navigator.canShare({ files: [state.generatedPdfFile] })) {
+      try {
+        await navigator.share({
+          files: [state.generatedPdfFile],
+          title: state.outputFileName,
+          text: 'PDF gerado via Foto para PDF'
+        });
+        return;
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.log('Tentando fallback de download direto:', err);
+        } else {
+          // Usuário apenas fechou a janela de compartilhamento
+          return;
+        }
+      }
+    }
+
+    // 2. Fallback sem abrir nova aba (usa target="_self")
+    if (state.generatedBlobUrl) {
+      fallbackDownloadLink.href = state.generatedBlobUrl;
+      fallbackDownloadLink.download = state.outputFileName;
+      fallbackDownloadLink.target = '_self';
+      fallbackDownloadLink.classList.remove('hidden');
+      fallbackDownloadLink.click();
+    }
+  }
+
+  // Listener para o botão principal "📥 Salvar / Compartilhar PDF no iPhone"
+  primarySaveBtn.addEventListener('click', () => {
+    triggerNativeSaveOrShare();
+  });
+
+  /**
+   * Processamento e Criação do Documento PDF A4
    */
   generatePdfBtn.addEventListener('click', async () => {
     if (!state.dataUrl) {
@@ -167,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     loadingOverlay.classList.remove('hidden');
 
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
         const { jsPDF } = window.jspdf;
 
@@ -182,13 +216,11 @@ document.addEventListener('DOMContentLoaded', () => {
           finalHeight = canvas.height;
         }
 
-        // Orientação proporcional A4
         const isLandscape = finalWidth > finalHeight;
         const pdfOrientation = isLandscape ? 'l' : 'p';
         const pageW = isLandscape ? 297 : 210;
         const pageH = isLandscape ? 210 : 297;
 
-        // Margem de 10mm
         const margin = 10;
         const availW = pageW - margin * 2;
         const availH = pageH - margin * 2;
@@ -213,51 +245,22 @@ document.addEventListener('DOMContentLoaded', () => {
         pdf.addImage(finalDataUrl, imgFormat, posX, posY, renderW, renderH);
 
         const outputFileName = generateSmartFileName();
-        state.generatedFileName = outputFileName;
+        state.outputFileName = outputFileName;
 
-        // 🟢 MECANISMO ROBUSTO iOS: Gerar Blob em vez de disparar doc.save() direto
+        // Gerar Blob e criar File Object para Web Share API
         const pdfBlob = pdf.output('blob');
-        state.generatedBlob = pdfBlob;
+        state.generatedBlobUrl = URL.createObjectURL(pdfBlob);
+        state.generatedPdfFile = new File([pdfBlob], outputFileName, { type: 'application/pdf' });
 
-        const blobUrl = URL.createObjectURL(pdfBlob);
-
-        // Configurar o botão explícito de download
-        downloadPdfLink.href = blobUrl;
-        downloadPdfLink.download = outputFileName;
-
-        // Configurar Web Share API para salvar no app "Arquivos" do iOS se disponível
-        const pdfFile = new File([pdfBlob], outputFileName, { type: 'application/pdf' });
-        if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-          sharePdfBtn.classList.remove('hidden');
-          sharePdfBtn.onclick = async () => {
-            try {
-              await navigator.share({
-                files: [pdfFile],
-                title: 'Salvar PDF',
-                text: 'Seu documento em formato PDF'
-              });
-            } catch (shareErr) {
-              console.log('Compartilhamento cancelado ou não suportado:', shareErr);
-            }
-          };
-        } else {
-          sharePdfBtn.classList.add('hidden');
-        }
-
-        // Tentar disparo automático suave de download
-        const tempLink = document.createElement('a');
-        tempLink.href = blobUrl;
-        tempLink.download = outputFileName;
-        document.body.appendChild(tempLink);
-        tempLink.click();
-        document.body.removeChild(tempLink);
-
-        // Exibir o card permanente com os botões de ação
+        // Esconder area de geracao e exibir o card de acao do iOS
         downloadResultCard.classList.remove('hidden');
 
         setTimeout(() => {
           downloadResultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 150);
+
+        // Disparar o menu de compartilhamento do iOS instantaneamente
+        triggerNativeSaveOrShare();
 
       } catch (err) {
         console.error('Erro ao gerar PDF:', err);
