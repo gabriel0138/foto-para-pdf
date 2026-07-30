@@ -6,7 +6,7 @@
   <title>📸 Gerador de PDF - Converta Fotos em PDF A4 Multipágina</title>
 
   <!-- Meta Tags PWA & iOS Safari -->
-  <meta name="description" content="Aplicação web PWA gratuita, rápida e offline para converter múltiplas fotos da câmera ou galeria em um único arquivo PDF formatado em A4.">
+  <meta name="description" content="Aplicação web PWA gratuita, rápida, offline e 100% privativa (Privacy by Design) para converter múltiplas fotos em um único arquivo PDF A4.">
   <meta name="theme-color" content="#2563eb" id="themeColorMeta">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -102,10 +102,10 @@
           <span id="themeIcon" class="text-lg">🌙</span>
         </button>
 
-        <!-- Badge de Status Offline / Privado -->
-        <span class="hidden sm:inline-flex bg-emerald-500/20 text-emerald-200 text-xs px-2.5 py-1 rounded-full font-bold items-center gap-1">
+        <!-- Badge de Status Offline & Privacidade Zero-Persistence -->
+        <span class="hidden sm:inline-flex bg-emerald-500/20 text-emerald-200 text-xs px-2.5 py-1 rounded-full font-bold items-center gap-1" title="Sua privacidade é garantida: nenhum dado fica salvo no navegador">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          100% Off-line
+          🛡️ Zero-Persistence
         </span>
       </div>
     </div>
@@ -114,18 +114,18 @@
   <!-- Conteúdo Principal -->
   <main class="w-full max-w-xl mx-auto px-4 py-6 flex-1 flex flex-col space-y-6">
 
-    <!-- Card de Boas-Vindas / Instruções Expandível -->
+    <!-- Card de Boas-Vindas / Instruções & Privacy Guarantee -->
     <div id="instructionCard" class="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-300 space-y-3 transition-all">
       <div class="flex items-center justify-between">
         <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <span>✨</span> Como funciona?
         </h2>
-        <span class="text-xs font-semibold px-2.5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-full">
-          Multipáginas
+        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center gap-1">
+          🔒 Privacy by Design
         </span>
       </div>
       <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-        Selecione uma ou mais imagens de uma só vez (ou vá adicionando aos poucos). Ajuste a ordem, gire se estiver deitada e gere um PDF formatado em folha A4 com salvamento direto.
+        Selecione suas fotos, organize a sequência, ajuste girando se necessário e digite um nome para o documento. Todo o processamento ocorre no seu dispositivo e o uso de memória é liberado imediatamente após o término (sem armazenar fotos ou arquivos).
       </p>
     </div>
 
@@ -221,13 +221,31 @@
       </div>
     </div>
 
-    <!-- Painel de Ajustes Opcionais do PDF -->
+    <!-- Painel de Ajustes Opcionais e Renomeação do PDF -->
     <div id="settingsCard" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
       <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-        <span>⚙️</span> Opções do PDF
+        <span>⚙️</span> Opções e Nome do Arquivo
       </h3>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+        <!-- Input de Nome Personalizado do Arquivo PDF -->
+        <div class="sm:col-span-2">
+          <label for="customFileNameInput" class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            Nome do Arquivo PDF <span class="text-slate-400 font-normal dark:text-slate-500">(Opcional)</span>
+          </label>
+          <div class="relative flex items-center">
+            <input 
+              type="text" 
+              id="customFileNameInput"
+              placeholder="ex: exame-medico-pai"
+              class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 pr-12 font-medium text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+              maxlength="60"
+              autocomplete="off"
+            />
+            <span class="absolute right-3 text-slate-400 font-bold text-xs pointer-events-none">.pdf</span>
+          </div>
+        </div>
+
         <!-- Margens -->
         <div>
           <label for="marginSelect" class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Margem da Folha</label>
@@ -332,7 +350,7 @@
 
       <div class="text-center w-full max-w-xs space-y-2">
         <h3 class="text-lg font-extrabold" id="loadingTitle">Gerando seu PDF...</h3>
-        <p class="text-xs text-slate-300 font-medium" id="progressDetail">Processando fotos em A4</p>
+        <p class="text-xs text-slate-300 font-medium" id="progressDetail">Comprimindo imagens e compilando A4</p>
         
         <!-- Barra de Progresso Animada -->
         <div class="w-full bg-slate-800/80 rounded-full h-3 p-0.5 overflow-hidden border border-slate-700">
@@ -351,7 +369,7 @@
 
   <!-- Rodapé Otimizado -->
   <footer class="w-full text-center py-4 px-4 text-xs text-slate-400 dark:text-slate-500 font-medium border-t border-slate-200/50 dark:border-slate-800/50 pb-safe">
-    <p>Foto PDF • Processamento 100% no seu dispositivo • Compatível com iOS & Android</p>
+    <p>Foto PDF • Privacy by Design (Zero Persistence) • Processamento local no navegador</p>
   </footer>
 
   <!-- Script da Aplicação -->

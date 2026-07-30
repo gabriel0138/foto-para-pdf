@@ -1,6 +1,6 @@
 /**
  * 📸 Foto para PDF - App JS (PWA Mobile & iOS Safari)
- * Desenvolvido para máxima compatibilidade, suporte a múltiplas fotos e salvamento nativo.
+ * Arquitetura Privativa (Privacy by Design & Zero-Persistence) com Compressor Automático.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const thumbnailsList = document.getElementById('thumbnailsList');
   const clearAllBtn = document.getElementById('clearAllBtn');
   const settingsCard = document.getElementById('settingsCard');
+  const customFileNameInput = document.getElementById('customFileNameInput');
   const marginSelect = document.getElementById('marginSelect');
   const orientationSelect = document.getElementById('orientationSelect');
   const generateActionArea = document.getElementById('generateActionArea');
@@ -34,7 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pwaInstallBanner = document.getElementById('pwaInstallBanner');
   const pwaInstallBtn = document.getElementById('pwaInstallBtn');
 
-  // --- Estado da Aplicação ---
+  // --- Estado da Aplicação (100% Efêmero na RAM) ---
   let state = {
     images: [], // Array: { id, name, dataUrl, width, height, rotation }
     margin: 10,
@@ -46,7 +47,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let deferredInstallPrompt = null;
 
-  // --- 1. Gerenciamento de Tema (Modo Escuro / Claro) ---
+  // --- 1. Garantia de Zero-Persistence e Limpeza de Memória RAM ---
+  function cleanupMemory() {
+    if (state.generatedBlobUrl) {
+      URL.revokeObjectURL(state.generatedBlobUrl);
+      state.generatedBlobUrl = null;
+    }
+    state.generatedPdfFile = null;
+  }
+
+  // --- 2. Gerenciamento de Tema (Modo Escuro / Claro) ---
   function initTheme() {
     const savedTheme = localStorage.getItem('theme');
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -79,10 +89,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initTheme();
 
-  // --- 2. Registro do Service Worker PWA & Prompt de Instalação ---
+  // --- 3. Registro do Service Worker PWA & Prompt de Instalação ---
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
-      .then(reg => console.log('Service Worker PWA Registrado com sucesso:', reg.scope))
+      .then(reg => console.log('Service Worker PWA Ativo:', reg.scope))
       .catch(err => console.log('Falha ao registrar Service Worker:', err));
   }
 
@@ -103,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- 3. Tratamento de Erros e Mensagens ---
+  // --- 4. Tratamento de Erros e Alertas ---
   function showError(msg) {
     errorText.textContent = msg;
     errorMessage.classList.remove('hidden');
@@ -117,10 +127,12 @@ document.addEventListener('DOMContentLoaded', () => {
     errorText.textContent = '';
   }
 
-  // --- 4. Leitura e Adição de Arquivos (Múltiplas Fotos / Drag & Drop) ---
+  // --- 5. Leitura e Adição de Arquivos (Múltiplas Fotos / Drag & Drop) ---
   function processSelectedFiles(files) {
     clearError();
+    cleanupMemory();
     downloadResultCard.classList.add('hidden');
+
     if (!files || files.length === 0) return;
 
     const validFiles = Array.from(files).filter(file => {
@@ -171,7 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsDataURL(file);
     });
 
-    // Reset no valor do input para permitir selecionar o mesmo arquivo novamente se desejar
     imageInput.value = '';
   }
 
@@ -179,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
     processSelectedFiles(e.target.files);
   });
 
-  // Drag and Drop
+  // Drag and Drop Handling
   ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, (e) => {
       e.preventDefault();
@@ -202,7 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     processSelectedFiles(files);
   });
 
-  // --- 5. Renderização da Galeria de Páginas ---
+  // --- 6. Renderização da Galeria de Páginas ---
   function renderGallery() {
     thumbnailsList.innerHTML = '';
     const total = state.images.length;
@@ -254,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <!-- Barra de Ações Rápidas -->
         <div class="flex items-center space-x-1 flex-shrink-0">
-          <!-- Girar -->
+          <!-- Girar 90 graus -->
           <button 
             type="button"
             data-action="rotate"
@@ -303,7 +314,6 @@ document.addEventListener('DOMContentLoaded', () => {
       thumbnailsList.appendChild(card);
     });
 
-    // Rolagem suave até a lista se for a primeira imagem adicionada
     if (total === 1) {
       setTimeout(() => {
         galleryContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -311,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Event Delegation para Ações nas Fotos da Galeria
+  // Event Delegation para Ações na Galeria
   thumbnailsList.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
@@ -350,51 +360,95 @@ document.addEventListener('DOMContentLoaded', () => {
 
   clearAllBtn.addEventListener('click', () => {
     state.images = [];
+    cleanupMemory();
     renderGallery();
     downloadResultCard.classList.add('hidden');
   });
 
   resetAllBtn.addEventListener('click', () => {
     state.images = [];
+    cleanupMemory();
+    if (customFileNameInput) customFileNameInput.value = '';
     renderGallery();
     downloadResultCard.classList.add('hidden');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
 
-  // --- 6. Rotação via Canvas Auxiliar ---
-  function getRotatedCanvas(imgDataUrl, angle) {
+  // --- 7. Compressor Automático de Imagem (Canvas Dynamic Scaling & 0.82 Quality) ---
+  function processAndCompressImage(dataUrl, rotation, maxWidth = 1200, quality = 0.82) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const w = img.naturalWidth;
-        const h = img.naturalHeight;
+        const origW = img.naturalWidth;
+        const origH = img.naturalHeight;
 
-        if (angle === 90 || angle === 270) {
-          canvas.width = h;
-          canvas.height = w;
-        } else {
-          canvas.width = w;
-          canvas.height = h;
+        // Calcular dimensões considerando a rotação
+        let targetW = origW;
+        let targetH = origH;
+        if (rotation === 90 || rotation === 270) {
+          targetW = origH;
+          targetH = origW;
         }
 
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate((angle * Math.PI) / 180);
-        ctx.drawImage(img, -w / 2, -h / 2);
+        // Redimensionar mantendo a proporção para limitar a dimensão máxima em ~1200px
+        let scale = 1;
+        if (targetW > maxWidth || targetH > maxWidth) {
+          scale = Math.min(maxWidth / targetW, maxWidth / targetH);
+        }
+
+        const finalW = Math.round(targetW * scale);
+        const finalH = Math.round(targetH * scale);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = finalW;
+        canvas.height = finalH;
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        // Fundo branco sólido (Garante legibilidade para PNGs ou fundos transparentes)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, finalW, finalH);
+
+        // Aplicação da rotação e escala no centro do Canvas
+        ctx.translate(finalW / 2, finalH / 2);
+        ctx.rotate((rotation * Math.PI) / 180);
+
+        const drawW = origW * scale;
+        const drawH = origH * scale;
+        ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+
+        // Exportação comprimida em JPEG com qualidade 0.82
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+
+        // Limpeza imediata da memória RAM do Canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        canvas.width = 0;
+        canvas.height = 0;
 
         resolve({
-          dataUrl: canvas.toDataURL('image/jpeg', 0.92),
-          width: canvas.width,
-          height: canvas.height
+          dataUrl: compressedDataUrl,
+          width: finalW,
+          height: finalH
         });
       };
+
       img.onerror = reject;
-      img.src = imgDataUrl;
+      img.src = dataUrl;
     });
   }
 
-  function generateSmartFileName() {
+  // --- 8. Geração de Nome de Arquivo Personalizado ou Padrão ---
+  function getFinalFileName() {
+    const customVal = customFileNameInput ? customFileNameInput.value.trim() : '';
+
+    if (customVal) {
+      // Remove extensão .pdf se o usuário digitou e limpa caracteres inválidos
+      const sanitized = customVal.replace(/\.pdf$/i, '').replace(/[/\\?%*:|"<>]/g, '-');
+      if (sanitized.length > 0) {
+        return `${sanitized}.pdf`;
+      }
+    }
+
+    // Padrão limpo com data e hora caso esteja vazio
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -405,7 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return `documento-${year}-${month}-${day}_${hours}${minutes}.pdf`;
   }
 
-  // --- 7. Salvamento e Compartilhamento Nativo (iOS Safari / Android) ---
+  // --- 9. Salvamento e Compartilhamento Nativo (iOS Safari / Android) ---
   async function triggerNativeSaveOrShare() {
     if (!state.generatedPdfFile) return;
 
@@ -421,12 +475,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (err.name !== 'AbortError') {
           console.log('Fallback para download direto:', err);
         } else {
-          return; // Usuário cancelou o compartilhamento
+          return;
         }
       }
     }
 
-    // Fallback de download direto se navigator.share não estiver disponível
     if (state.generatedBlobUrl) {
       fallbackDownloadLink.href = state.generatedBlobUrl;
       fallbackDownloadLink.download = state.outputFileName;
@@ -440,12 +493,15 @@ document.addEventListener('DOMContentLoaded', () => {
     triggerNativeSaveOrShare();
   });
 
-  // --- 8. Geração do Documento PDF Multipágina ---
+  // --- 10. Geração do Documento PDF Multipágina com Otimização de Performance ---
   generatePdfBtn.addEventListener('click', async () => {
     if (state.images.length === 0) {
       showError('Nenhuma foto selecionada.');
       return;
     }
+
+    // Limpar quaisquer blobs anteriores da memória
+    cleanupMemory();
 
     const marginValue = parseFloat(marginSelect.value);
     const orientationMode = orientationSelect.value;
@@ -453,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadingOverlay.classList.remove('hidden');
     progressPercent.textContent = '0%';
     progressBarFill.style.width = '0%';
-    progressDetail.textContent = 'Iniciando compilação do PDF...';
+    progressDetail.textContent = 'Comprimindo imagens e otimizando...';
 
     setTimeout(async () => {
       try {
@@ -465,25 +521,19 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let i = 0; i < totalImages; i++) {
           const item = state.images[i];
 
-          // Atualiza o progresso visual
           const percent = Math.round(((i + 1) / totalImages) * 100);
           progressPercent.textContent = `${percent}%`;
           progressBarFill.style.width = `${percent}%`;
-          progressDetail.textContent = `Processando foto ${i + 1} de ${totalImages}...`;
+          progressDetail.textContent = `Otimizando e comprimindo imagem ${i + 1} de ${totalImages}...`;
 
-          // Processa rotação se necessário
-          let finalDataUrl = item.dataUrl;
-          let finalWidth = item.width;
-          let finalHeight = item.height;
+          // Compressor Automático de Imagem (Max 1200px & Qualidade 0.82)
+          const processed = await processAndCompressImage(item.dataUrl, item.rotation, 1200, 0.82);
 
-          if (item.rotation !== 0) {
-            const rotated = await getRotatedCanvas(item.dataUrl, item.rotation);
-            finalDataUrl = rotated.dataUrl;
-            finalWidth = rotated.width;
-            finalHeight = rotated.height;
-          }
+          const finalDataUrl = processed.dataUrl;
+          const finalWidth = processed.width;
+          const finalHeight = processed.height;
 
-          // Define orientação da folha A4
+          // Orientação A4
           let isLandscape = false;
           if (orientationMode === 'auto') {
             isLandscape = finalWidth > finalHeight;
@@ -494,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
           }
 
           const pageOrientation = isLandscape ? 'l' : 'p';
-          const pageW = isLandscape ? 297 : 210; // A4 em mm
+          const pageW = isLandscape ? 297 : 210; // mm
           const pageH = isLandscape ? 210 : 297;
 
           const availW = pageW - marginValue * 2;
@@ -516,29 +566,21 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.addPage('a4', pageOrientation);
           }
 
-          let imgFormat = 'JPEG';
-          if (item.name.toLowerCase().endsWith('.png')) {
-            imgFormat = 'PNG';
-          }
-
-          pdf.addImage(finalDataUrl, imgFormat, posX, posY, renderW, renderH, undefined, 'FAST');
+          pdf.addImage(finalDataUrl, 'JPEG', posX, posY, renderW, renderH, undefined, 'FAST');
         }
 
-        const outputFileName = generateSmartFileName();
+        const outputFileName = getFinalFileName();
         state.outputFileName = outputFileName;
 
-        // Gerar o arquivo Blob final
+        // Gerar Blob do PDF final
         const pdfBlob = pdf.output('blob');
-        if (state.generatedBlobUrl) {
-          URL.revokeObjectURL(state.generatedBlobUrl);
-        }
         state.generatedBlobUrl = URL.createObjectURL(pdfBlob);
         state.generatedPdfFile = new File([pdfBlob], outputFileName, { type: 'application/pdf' });
 
         const sizeInMb = (pdfBlob.size / (1024 * 1024)).toFixed(2);
         const sizeDisplay = sizeInMb > 0.9 ? `${sizeInMb} MB` : `${Math.round(pdfBlob.size / 1024)} KB`;
 
-        pdfDetailsText.textContent = `${totalImages} página${totalImages > 1 ? 's' : ''} • Tamanho: ${sizeDisplay}`;
+        pdfDetailsText.textContent = `Arquivo: ${outputFileName} • ${totalImages} página${totalImages > 1 ? 's' : ''} • Tamanho: ${sizeDisplay}`;
 
         downloadResultCard.classList.remove('hidden');
 
@@ -546,12 +588,12 @@ document.addEventListener('DOMContentLoaded', () => {
           downloadResultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 150);
 
-        // Dispara o menu nativo de compartilhamento/salvamento do dispositivo
+        // Disparar menu nativo de compartilhamento/salvamento do dispositivo
         triggerNativeSaveOrShare();
 
       } catch (err) {
         console.error('Erro ao gerar PDF:', err);
-        showError('Ocorreu um erro ao compilar o PDF. Tente novamente.');
+        showError('Ocorreu um erro ao processar o PDF. Tente novamente.');
       } finally {
         loadingOverlay.classList.add('hidden');
       }

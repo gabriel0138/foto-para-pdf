@@ -1,67 +1,53 @@
-# 📸 Foto para PDF - PWA Mobile & Conversor Multipágina A4
+# 📸 Foto para PDF - PWA Mobile & Conversor Multipágina A4 (Privacy by Design)
 
-Uma aplicação web moderna, ultra-rápida, 100% gratuita e offline (PWA) desenvolvida com **HTML5, Tailwind CSS e jsPDF**. Projetada especialmente para dispositivos móveis (foco no ecossistema **iOS/Safari** e **Android**), permitindo converter imagens em arquivos PDF formatados em A4 sem abrir novas abas e mantendo a total privacidade dos dados no próprio dispositivo.
+Uma aplicação web moderna, ultra-rápida, 100% gratuita, offline (PWA) e **100% privativa (Privacy by Design & Zero-Persistence)** desenvolvida com **HTML5, Tailwind CSS e jsPDF**. Projetada especialmente para dispositivos móveis (ecossistemas **iOS/Safari** e **Android**), permitindo converter imagens em arquivos PDF formatados em A4 de alta qualidade e tamanho ultra-otimizado.
 
 ---
 
-## ✨ Funcionalidades Avançadas
+## ✨ Funcionalidades Principais & Blindagem de Privacidade
 
-- 📄 **Suporte a Múltiplas Páginas**: Selecione várias fotos de uma só vez ou adicione incrementalmente. Cada imagem é compilada como uma folha A4 centralizada no mesmo arquivo PDF.
-- 🖼️ **Gerenciador de Páginas & Miniaturas**:
-  - Pré-visualização com miniaturas (*thumbnails*).
-  - 🔄 **Girar 90°**: Corrija fotos tiradas na horizontal/vertical.
-  - ⬆️ ⬇️ **Reordenar Páginas**: Altere a ordem das páginas facilmente.
-  - 🗑️ **Remover Fotos**: Exclua páginas indesejadas antes de compilar.
-- ⚙️ **Configurações do PDF**:
-  - Ajuste de margens (Padrão 10mm, Sem Margem / Full-bleed, Margem larga 20mm).
-  - Orientação da folha (Automática conforme a foto, Forçar Retrato, Forçar Paisagem).
-- 📲 **PWA (Progressive Web App)**:
-  - Instalável na tela inicial do smartphone.
-  - Funciona **100% Offline** via Service Worker (`sw.js`).
-- 🌙 **Modo Escuro / Claro Automático**: Sincronização inteligente com a preferência do sistema operacional do usuário, além de controle manual.
-- ⏳ **Indicador de Progresso Animado**: Feedback visual em tempo real durante o processamento da imagem e compilação do PDF.
-- 📥 **Salvamento & Compartilhamento Nativo no iOS/Android**: Utilização da **Web Share API** (`navigator.share`) para abrir diretamente o menu *"Salvar em Arquivos"* ou enviar pelo WhatsApp sem bloqueio de pop-up.
+### 1. ⚡ Compressor Automático de Imagem (Performance Web)
+- Redimensionamento inteligente no Canvas com limite máximo de resolução de **~1200px** por borda e compressão **JPEG a 0.82**.
+- Evita a geração de PDFs gigantescos (>10MB) ao tirar fotos com telefones modernos (48MP+), garantindo arquivos ultra-leves (<1MB) mantendo nitidez cirúrgica para impressão e leitura de documentos.
+
+### 2. 📝 Renomeação Personalizada de Arquivo
+- Campo visível na interface para digitar o nome desejado do PDF (ex: `exame-medico-pai`).
+- Adiciona automaticamente a extensão `.pdf` com sanitização de caracteres especiais.
+- Padrão automático com data/hora caso o campo permança em branco (`documento-YYYY-MM-DD_HHMM.pdf`).
+
+### 3. 🛡️ Auditoria Zero-Persistence (Privacidade Absoluta)
+- **100% Efêmero**: Nenhuma foto, imagem processada, base64 ou arquivo PDF é salvo em `localStorage`, `sessionStorage`, `cookies` ou `IndexedDB`.
+- **Limpeza de Memória RAM**: Invocação sistemática de `URL.revokeObjectURL` e zera-dimensionamento de Canvas imediatamente após o uso ou reset da aplicação, eliminando qualquer risco de vazamento de cache sensível no navegador.
+
+### 4. 📄 Suporte a Múltiplas Páginas & Miniaturas
+- Seleção múltipla simultânea ou inclusão incremental.
+- Miniaturas (*thumbnails*) interativas com **Girar 90°**, **Mover para Cima/Baixo** e **Remover**.
+- Opções de margem (Padrão 10mm, Sem Margem / Full-bleed, Margem Larga 20mm) e orientação da folha (Auto, Retrato, Paisagem).
+
+### 5. 📲 PWA & Design Nativo iOS/Android
+- Instalável na tela inicial via `manifest.json` com ícone personalizado.
+- Funcionamento **100% Offline** gerenciado pelo Service Worker (`sw.js`).
+- Suporte a **Modo Escuro / Claro** sincronizado com o sistema operacional.
+- Salvamento e compartilhamento nativo via **Web Share API** (`navigator.share`).
 
 ---
 
 ## ⚡ Tecnologias Utilizadas
 
-- **HTML5 & Vanilla JavaScript ES6+**: Arquitetura modular sem frameworks pesados, garantindo carregamento instantâneo.
-- **Tailwind CSS**: Design responsivo com Tailwind, suporte a Dark Mode por classe e otimização para iOS Safe Area (`env(safe-area-inset)`).
-- **jsPDF (v2.5.1)**: Compilação local de PDF no navegador.
-- **PWA Service Worker & Manifest**: Cache inteligente e experiência nativa em tela cheia.
+- **HTML5 & Vanilla JavaScript ES6+**: Arquitetura livre de dependências pesadas.
+- **Tailwind CSS**: Estilização responsiva com Dark Mode nativo e suporte a iOS Safe Area (`env(safe-area-inset)`).
+- **jsPDF (v2.5.1)**: Compilação de PDF local direto no dispositivo do usuário.
+- **Service Worker & Web App Manifest**: PWA nativo offline.
 
 ---
 
-## 🚀 Como Executar ou Fazer Deploy no GitHub Pages
+## 🚀 Versionamento e Deploy no GitHub Pages
 
-### 1. Executar Localmente
-Como a aplicação utiliza apenas scripts client-side, basta abrir o arquivo `index.html` em qualquer navegador ou servir localmente usando uma extensão HTTP (ex: Live Server).
-
-### 2. Deploy no GitHub Pages via Terminal (SSH)
+### Deploy Automático via SSH
 ```bash
-# Adicionar alterações
 git add .
-
-# Criar commit com as novidades
-git commit -m "feat: suporte multipágina, dark mode, miniaturas e otimizações PWA"
-
-# Push para a branch main
+git commit -m "feat: compressor de imagem 1200px, renomeação de PDF e auditoria zero-persistence"
 git push origin main
 ```
 
-Após o push, o GitHub Pages atualizará o site automaticamente no seu domínio (ex: `https://gabriel0138.github.io/foto-para-pdf/`).
-
----
-
-## 📱 DICA: Como Adicionar na Tela de Início (iPhone / iOS)
-
-1. Acesse o site no **Safari** do iPhone.
-2. Toque no ícone de **Compartilhar** (quadrado com seta para cima 📤).
-3. Selecione **"Adicionar à Tela de Início"**.
-4. Abra o app pelo novo ícone **Foto PDF** para ter navegação em tela cheia (estilo nativo).
-
----
-
-## 🔒 Privacidade e Segurança
-Nenhuma imagem é enviada para servidores externos. Todo o processamento de imagens e renderização do PDF é feito exclusivamente na memória local do navegador do usuário.
+O site estará imediatamente disponível em `https://gabriel0138.github.io/foto-para-pdf/`.
