@@ -1,0 +1,21 @@
+{
+  "name": "Gerador de PDF - Foto para PDF A4",
+  "short_name": "Foto PDF",
+  "description": "Converta fotos da câmera ou galeria em PDF A4 instantaneamente no seu celular.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/337/337946.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/337/337946.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

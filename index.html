@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full bg-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>📸 Gerador de PDF - Converta suas Fotos em PDF A4</title>
+
+  <!-- Meta Tags PWA & iOS Safari -->
+  <meta name="description" content="Aplicação web simples, rápida e 100% gratuita para converter fotos da câmera ou galeria em arquivos PDF formatados em A4.">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Foto PDF">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/337/337946.png">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jsPDF CDN (Versão Estável) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <style>
+    /* Travar seleções indesejadas no iOS para parecer app nativo */
+    body {
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col justify-between text-slate-800 antialiased selection:bg-blue-200">
+
+  <!-- Cabeçalho Fixo / Superior -->
+  <header class="w-full bg-blue-600 text-white shadow-lg sticky top-0 z-30 pt-safe">
+    <div class="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <span class="text-3xl" role="img" aria-label="Câmera">📸</span>
+        <div>
+          <h1 class="text-xl font-black leading-tight tracking-wide">Gerador de PDF</h1>
+          <p class="text-xs text-blue-100 font-medium">Foto para PDF em formato A4</p>
+        </div>
+      </div>
+      <span class="bg-blue-500 text-blue-100 text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider">
+        100% Seguro
+      </span>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="w-full max-w-md mx-auto px-4 py-6 flex-1 flex flex-col justify-center space-y-6">
+
+    <!-- Card de Boas-Vindas / Instruções Curtas -->
+    <div id="instructionCard" class="bg-white rounded-3xl p-5 shadow-sm border border-slate-200/80 text-center space-y-2">
+      <h2 class="text-lg font-bold text-slate-900">Como funciona?</h2>
+      <p class="text-sm text-slate-600 leading-relaxed">
+        Tire uma foto do seu documento ou escolha da sua galeria. A imagem será ajustada automaticamente em uma página de papel A4 pronta para salvar ou enviar.
+      </p>
+    </div>
+
+    <!-- Banner de Erro (Oculto por padrão) -->
+    <div id="errorMessage" class="hidden bg-rose-50 border-2 border-rose-300 rounded-2xl p-4 text-rose-800 text-center text-sm font-semibold shadow-md animate-pulse">
+      ⚠️ <span id="errorText">Por favor, selecione um arquivo de imagem válido.</span>
+    </div>
+
+    <!-- Botão Grande de Carregar Imagem -->
+    <div class="space-y-4">
+      <input 
+        type="file" 
+        id="imageInput" 
+        accept="image/*" 
+        capture="environment" 
+        class="hidden"
+      >
+      
+      <button 
+        id="selectBtn"
+        type="button" 
+        onclick="document.getElementById('imageInput').click()"
+        class="w-full group relative flex flex-col items-center justify-center p-8 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] transition-all duration-200 text-white rounded-3xl shadow-xl border-4 border-blue-400/30 focus:outline-none"
+      >
+        <div class="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+          <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </div>
+        <span class="text-xl font-extrabold tracking-wide text-center">Tirar Foto ou Escolher da Galeria</span>
+        <span class="text-xs text-blue-200 mt-2 font-medium">Toque aqui para abrir a câmera ou arquivos</span>
+      </button>
+    </div>
+
+    <!-- Container de Pré-visualização da Imagem (Oculto até selecionar a foto) -->
+    <div id="previewCard" class="hidden bg-white rounded-3xl p-5 shadow-lg border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <span class="text-sm font-bold text-slate-700 flex items-center space-x-2">
+          <span>🖼️</span> <span>Pré-visualização da Foto</span>
+        </span>
+        <button 
+          id="rotateBtn" 
+          type="button" 
+          class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl transition flex items-center space-x-1"
+          title="Girar imagem 90 graus"
+        >
+          <span>🔄</span> <span>Girar 90°</span>
+        </button>
+      </div>
+
+      <!-- Área da Foto estilo Papel A4 -->
+      <div class="relative bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl p-2 flex items-center justify-center min-h-[260px] overflow-hidden">
+        <img 
+          id="imagePreview" 
+          src="" 
+          alt="Pré-visualização da Imagem" 
+          class="max-h-72 w-auto object-contain rounded-lg shadow-md transition-transform duration-300"
+        />
+      </div>
+
+      <!-- Informações do Arquivo -->
+      <div class="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
+        <span id="fileNameDisplay">imagem.jpg</span>
+        <span id="fileDimensionsDisplay">-- x --</span>
+      </div>
+
+      <!-- Botão para Trocar de Foto -->
+      <button 
+        type="button" 
+        onclick="document.getElementById('imageInput').click()" 
+        class="w-full py-2.5 text-center text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-xl transition"
+      >
+        🔄 Escolher outra imagem
+      </button>
+    </div>
+
+    <!-- Botão de Gerar e Baixar PDF (Aparece após selecionar foto) -->
+    <div id="generateActionArea" class="hidden space-y-3 pt-2">
+      <button 
+        id="generatePdfBtn" 
+        type="button"
+        class="w-full flex items-center justify-center space-x-3 py-5 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all duration-200 text-white rounded-3xl shadow-xl text-xl font-black border-4 border-emerald-400/30"
+      >
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <span>Gerar e Baixar PDF</span>
+      </button>
+      <p class="text-center text-xs text-slate-500 font-medium">
+        📄 O arquivo será formatado automaticamente em página A4.
+      </p>
+    </div>
+
+    <!-- Indicador de Carregamento (Loading Overlay) -->
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-white space-y-4">
+      <div class="w-16 h-16 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+      <div class="text-center">
+        <h3 class="text-xl font-bold">Gerando seu PDF...</h3>
+        <p class="text-sm text-slate-200 mt-1">Ajustando imagem na folha A4</p>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Rodapé Simples -->
+  <footer class="w-full text-center py-4 text-xs text-slate-400 font-medium">
+    <p>Criado com carinho para ser simples e rápido ❤️</p>
+  </footer>
+
+  <!-- Script da Aplicação -->
+  <script src="app.js"></script>
+</body>
+</html>
